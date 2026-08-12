@@ -18,6 +18,10 @@ app.get('/api/health', (req, res) => {
 app.use('/api', emailRoutes);
 app.use('/api', uploadRoutes);
 
+const validationRoutes = require('./routes/validationRoutes');
+// ...
+app.use('/api', validationRoutes);
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
