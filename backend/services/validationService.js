@@ -1,47 +1,30 @@
 const db = require('../db/dbConnection');
-const { runValidationPipeline } = require('../services/pipelineOrchestrator');
+const { DISPOSABLE_DOMAINS } = require('../utils/disposableDomains');
+const { ROLE_PREFIXES } = require('../utils/rolePrefixes');
 
-async function runValidation(req, res) {
-  try {
-    const result = await runValidationPipeline();
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({
-      error: 'Validation pipeline failed',
-      detail: err.message
-    });
-  }
+const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
+function checkSyntax(email) {
+  const isValid = EMAIL_REGEX.test(email);
+  return { pass: isValid, detail: isValid ? 'Valid syntax' : 'Failed RFC 5322 pattern match' };
 }
 
-function getValidationLogs(req, res) {
-  try {
-    const logs = db.prepare(`
-      SELECT
-        vl.id,
-        vl.email_id,
-        er.email,
-        vl.run_id,
-        vl.stage,
-        vl.result,
-        vl.detail,
-        vl.duration_ms,
-        vl.logged_at
-      FROM validation_log vl
-      JOIN email_repository er
-        ON er.id = vl.email_id
-      ORDER BY vl.id ASC
-    `).all();
+function checkDuplicate(emailRecord) {
+  const existing = db.prepare(`
+    SELECT id FROM email_repository
+    WHERE email_normalized = ? AND id != ? AND status != 'unvalidated'
+  `).get(emailRecord.email_normalized, emailRecord.id);
 
-    res.json(logs);
-  } catch (err) {
-    res.status(500).json({
-      error: 'Failed to retrieve validation logs',
-      detail: err.message
-    });
-  }
+  return existing
+    ? { isDuplicate: true, detail: `Duplicate of record id ${existing.id}` }
+    : { isDuplicate: false, detail: 'No duplicate found' };
 }
 
-module.exports = {
-  runValidation,
-  getValidationLogs
-};
+function checkStaticClassification(emailRecord) {
+  const isRoleBased = ROLE_PREFIXES.includes(emailRecord.local_part.toLowerCase());
+  const isDisposable = DISPOSABLE_DOMAINS.includes(emailRecord.domain.toLowerCase());
+
+  return { isRoleBased, isDisposable };
+}
+
+module.exports = { checkSyntax, checkDuplicate, checkStaticClassification, EMAIL_REGEX };
