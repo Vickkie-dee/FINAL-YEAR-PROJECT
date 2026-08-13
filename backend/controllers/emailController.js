@@ -5,6 +5,36 @@ function getAllEmails(req, res) {
   res.json(emails);
 }
 
+function addSingleEmail(req, res) {
+  const { email } = req.body;
+
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  const normalized = email.trim().toLowerCase();
+  const parts = normalized.split('@');
+  const localPart = parts[0] || '';
+  const domain = parts[1] || '';
+
+  try {
+    const result = db.prepare(`
+      INSERT INTO email_repository (email, email_normalized, local_part, domain)
+      VALUES (?, ?, ?, ?)
+    `).run(email.trim(), normalized, localPart, domain);
+
+    res.json({
+      message: 'Email added successfully',
+      id: result.lastInsertRowid,
+    });
+  } catch (err) {
+    if (err.message.includes('UNIQUE constraint failed')) {
+      return res.status(409).json({ error: 'This email already exists in the repository' });
+    }
+    res.status(500).json({ error: 'Failed to add email', detail: err.message });
+  }
+}
+
 function getDashboardStats(req, res) {
   const total = db.prepare('SELECT COUNT(*) AS count FROM email_repository').get().count;
   const statusCounts = db.prepare(`
@@ -33,4 +63,4 @@ function getDashboardStats(req, res) {
   res.json(stats);
 }
 
-module.exports = { getAllEmails, getDashboardStats };
+module.exports = { getAllEmails, getDashboardStats, addSingleEmail };
