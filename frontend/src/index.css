@@ -1,1 +1,25 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Public+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --paper: #F7F5F0;
+  --ink: #14181F;
+  --ink-text: #1F2430;
+  --muted: #5B6270;
+  --border: #E4E0D6;
+  --verified: #1B7A6B;
+  --risky: #C98A2C;
+  --invalid: #B4453A;
+  --duplicate: #6B5B95;
+  --inconclusive: #5B6270;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink-text);
+  font-family: 'Public Sans', sans-serif;
+}
+
+.font-mono-tech {
+  font-family: 'IBM Plex Mono', monospace;
+}

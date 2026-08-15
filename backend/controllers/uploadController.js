@@ -17,21 +17,20 @@ function uploadCsv(req, res) {
   fs.createReadStream(filePath)
     .pipe(csv())
     .on('data', (row) => {
-      // Assumes the CSV has a column literally named "email" (case-sensitive)
       if (row.email) rows.push(row.email);
     })
     .on('end', () => {
       const insertBatch = db.prepare(`
-        INSERT INTO upload_batches (filename, total_rows, imported_rows, skipped_rows)
-        VALUES (?, ?, 0, 0)
+        INSERT INTO upload_batches (user_id, filename, total_rows, imported_rows, skipped_rows)
+        VALUES (?, ?, ?, 0, 0)
       `);
-      const batchResult = insertBatch.run(req.file.originalname, rows.length);
+      const batchResult = insertBatch.run(req.userId, req.file.originalname, rows.length);
       const batchId = batchResult.lastInsertRowid;
 
       const insertEmail = db.prepare(`
         INSERT OR IGNORE INTO email_repository
-        (email, email_normalized, local_part, domain, source_batch_id)
-        VALUES (?, ?, ?, ?, ?)
+        (user_id, email, email_normalized, local_part, domain, source_batch_id)
+        VALUES (?, ?, ?, ?, ?, ?)
       `);
 
       let imported = 0;
@@ -44,11 +43,11 @@ function uploadCsv(req, res) {
           const localPart = parts[0] || '';
           const domain = parts[1] || '';
 
-          const result = insertEmail.run(rawEmail, normalized, localPart, domain, batchId);
+          const result = insertEmail.run(req.userId, rawEmail, normalized, localPart, domain, batchId);
           if (result.changes > 0) {
             imported++;
           } else {
-            skipped++; // duplicate email_normalized, ignored by INSERT OR IGNORE
+            skipped++;
           }
         }
       });
@@ -59,7 +58,7 @@ function uploadCsv(req, res) {
         UPDATE upload_batches SET imported_rows = ?, skipped_rows = ? WHERE id = ?
       `).run(imported, skipped, batchId);
 
-      fs.unlinkSync(filePath); // clean up the temp uploaded file, it's in the DB now
+      fs.unlinkSync(filePath);
 
       res.json({
         message: 'Upload complete',

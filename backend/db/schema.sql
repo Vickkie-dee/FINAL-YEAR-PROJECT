@@ -1,7 +1,8 @@
 CREATE TABLE IF NOT EXISTS email_repository (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id             TEXT NOT NULL,
     email               TEXT NOT NULL,
-    email_normalized    TEXT NOT NULL UNIQUE,
+    email_normalized    TEXT NOT NULL,
     local_part          TEXT,
     domain              TEXT,
     status              TEXT NOT NULL DEFAULT 'unvalidated'
@@ -13,11 +14,13 @@ CREATE TABLE IF NOT EXISTS email_repository (
     source_batch_id     INTEGER,
     created_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_validated_at   DATETIME,
-    FOREIGN KEY (source_batch_id) REFERENCES upload_batches(id)
+    FOREIGN KEY (source_batch_id) REFERENCES upload_batches(id),
+    UNIQUE(user_id, email_normalized)
 );
 
 CREATE TABLE IF NOT EXISTS upload_batches (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         TEXT NOT NULL,
     filename        TEXT NOT NULL,
     total_rows      INTEGER DEFAULT 0,
     imported_rows   INTEGER DEFAULT 0,
@@ -27,6 +30,7 @@ CREATE TABLE IF NOT EXISTS upload_batches (
 
 CREATE TABLE IF NOT EXISTS validation_runs (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         TEXT NOT NULL,
     started_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
     completed_at    DATETIME,
     total_processed INTEGER DEFAULT 0,
@@ -49,9 +53,4 @@ CREATE TABLE IF NOT EXISTS validation_log (
     logged_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (email_id) REFERENCES email_repository(id),
     FOREIGN KEY (run_id) REFERENCES validation_runs(id)
-);
-
-CREATE TABLE IF NOT EXISTS disposable_domains (
-    domain      TEXT PRIMARY KEY,
-    added_at    DATETIME DEFAULT CURRENT_TIMESTAMP
 );

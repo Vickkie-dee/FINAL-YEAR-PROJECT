@@ -3,8 +3,7 @@ const { runValidationPipeline } = require('../services/pipelineOrchestrator');
 
 async function runValidation(req, res) {
   try {
-    const result = await runValidationPipeline();
-
+    const result = await runValidationPipeline(req.userId);
     res.json(result);
   } catch (err) {
     res.status(500).json({
@@ -30,8 +29,9 @@ function getValidationLogs(req, res) {
       FROM validation_log vl
       JOIN email_repository er
         ON er.id = vl.email_id
+      WHERE er.user_id = ?
       ORDER BY vl.id ASC
-    `).all();
+    `).all(req.userId);
 
     res.json(logs);
   } catch (err) {

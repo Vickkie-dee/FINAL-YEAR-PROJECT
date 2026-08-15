@@ -26,5 +26,15 @@ function checkStaticClassification(emailRecord) {
 
   return { isRoleBased, isDisposable };
 }
+function checkDuplicate(emailRecord) {
+  const existing = db.prepare(`
+    SELECT id FROM email_repository
+    WHERE user_id = ? AND email_normalized = ? AND id != ? AND status != 'unvalidated'
+  `).get(emailRecord.user_id, emailRecord.email_normalized, emailRecord.id);
+
+  return existing
+    ? { isDuplicate: true, detail: `Duplicate of record id ${existing.id}` }
+    : { isDuplicate: false, detail: 'No duplicate found' };
+}
 
 module.exports = { checkSyntax, checkDuplicate, checkStaticClassification, EMAIL_REGEX };

@@ -99,13 +99,13 @@ async function validateSingleEmail(emailRecord, runId) {
   return finalStatus;
 }
 
-async function runValidationPipeline() {
-  const pendingEmails = db.prepare(`SELECT * FROM email_repository WHERE status = 'unvalidated'`).all();
+async function runValidationPipeline(userId) {
+  const pendingEmails = db.prepare(`SELECT * FROM email_repository WHERE user_id = ? AND status = 'unvalidated'`).all(userId);
 
   const runInsert = db.prepare(`
-    INSERT INTO validation_runs (total_processed, status) VALUES (0, 'running')
+    INSERT INTO validation_runs (user_id, total_processed, status) VALUES (?, 0, 'running')
   `);
-  const runId = runInsert.run().lastInsertRowid;
+  const runId = runInsert.run(userId).lastInsertRowid;
 
   const counts = { valid: 0, invalid: 0, risky: 0, duplicate: 0, inconclusive: 0 };
 
