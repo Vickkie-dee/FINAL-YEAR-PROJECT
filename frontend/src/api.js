@@ -1,6 +1,6 @@
 import { getUserId } from './userIdentity';
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'https://final-year-project-08je.onrender.com/api';
 
 function headers(extra = {}) {
   return { 'X-User-Id': getUserId(), ...extra };
